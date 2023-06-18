@@ -22,23 +22,37 @@ options(tibble.print_max = 10)
 
 This vignette describes the use of the new `pivot_longer()` and `pivot_wider()` functions. Their goal is to improve the usability of `gather()` and `spread()`, and incorporate state-of-the-art features found in other packages.
 
+このヴィネットでは、新しい関数 `pivot_longer()` と `pivot_wider()` の使用法を説明します。その目的は `gather()` と `spread()` の使い勝手を向上させ、他のパッケージで見られる最先端の機能を取り入れることにあります。
+
 For some time, it's been obvious that there is something fundamentally wrong with the design of `spread()` and `gather()`. Many people don't find the names intuitive and find it hard to remember which direction corresponds to spreading and which to gathering. It also seems surprisingly hard to remember the arguments to these functions, meaning that many people (including me!) have to consult the documentation every time.
 
+以前から、`spread()`と`gather()`のデザインには何か根本的な問題があることは明らかでした。多くの人がこの名前を直感的に理解できず、どの方向が広がり、どの方向が集まるかを覚えるのが難しいのです。また、これらの関数の引数を覚えるのも意外と大変なようで、多くの人が（私も含めて！）毎回ドキュメントを参照しなければならないのです。
+
 There are two important new features inspired by other R packages that have been advancing reshaping in R:
+
+Rでリシェイプを進めている他のRパッケージからヒントを得た重要な新機能が2つあります：
 
 * `pivot_longer()` can work with multiple value variables that may have 
   different types, inspired by the enhanced `melt()` and `dcast()` 
   functions provided by the [data.table][data.table] package by Matt Dowle 
   and Arun Srinivasan.
+  
+* `pivot_longer()` は、Matt Dowle と Arun Srinivasan による data.table パッケージが提供する拡張 `melt()` と `dcast()` 関数に触発されて、異なる型を持つ複数の値変数を扱うことができます。
 
 * `pivot_longer()` and `pivot_wider()` can take a data frame that specifies
   precisely how metadata stored in column names becomes data variables (and 
   vice versa), inspired by the [cdata][cdata] package by John Mount and 
   Nina Zumel. 
 
+* `pivot_longer()`と`pivot_wider()`は、John MountとNina Zumelによるcdataパッケージに触発されて、列名に格納されたメタデータがデータ変数になる（あるいはその逆）方法を正確に指定するデータフレームを受け取ることができます。
+
 In this vignette, you'll learn the key ideas behind `pivot_longer()` and `pivot_wider()` as you see them used to solve a variety of data reshaping challenges ranging from simple to complex.
 
+このビネットでは、`pivot_longer()`と`pivot_wider()`を使用して、単純なものから複雑なものまで、様々なデータ再形成の課題を解決する様子をご覧いただきながら、そのキーアイデアを学びます。
+
 To begin we'll load some needed packages. In real analysis code, I'd imagine you'd do with the `library(tidyverse)`, but I can't do that here since this vignette is embedded in a package.
+
+まず始めに、必要なパッケージをいくつかロードします。実際の解析コードでは、`library(tidyverse)`で行うかと思いますが、このヴィネットはパッケージに埋め込まれているので、ここではそれができないのです。
 
 ```{r setup, message = FALSE}
 library(tidyr)
@@ -50,11 +64,17 @@ library(readr)
 
 `pivot_longer()` makes datasets __longer__ by increasing the number of rows and decreasing the number of columns. I don't believe it makes sense to describe a dataset as being in "long form". Length is a relative term, and you can only say (e.g.) that dataset A is longer than dataset B.
 
+`pivot_longer()`は、行数を増やし、列数を減らすことで、データセットを__longer__にする。データセットが「長い形」であると表現することに意味があるとは思いません。長さは相対的な用語であり、（例えば）データセットAはデータセットBより長いとしか言いようがありません。
+
 `pivot_longer()` is commonly needed to tidy wild-caught datasets as they often optimise for ease of data entry or ease of comparison rather than ease of analysis. The following sections show how to use `pivot_longer()` for a wide range of realistic datasets.
+
+自然界に存在するデータセットは、分析のしやすさよりもデータ入力のしやすさや比較のしやすさに最適化されていることが多いため、`pivot_longer()`は整頓によく用いられます。以下のセクションでは、現実的な幅広いデータセットに対して `pivot_longer()` を使用する方法を紹介します。
 
 ### String data in column names {#pew}
 
 The `relig_income` dataset stores counts based on a survey which (among other things) asked people about their religion and annual income:
+
+relig_income`データセットには、宗教と年収を尋ねたアンケートに基づくカウントが格納されています：
 
 ```{r}
 relig_income
@@ -62,11 +82,19 @@ relig_income
 
 This dataset contains three variables:
 
+このデータセットには3つの変数が含まれています：
+
 * `religion`, stored in the rows,
 * `income` spread across the column names, and 
 * `count` stored in the cell values. 
 
+* 行に格納されている `religion` 、
+* 列の名前に広がる`income` と、
+* セルの値に格納される`count` です。
+
 To tidy it we use `pivot_longer()`:
+
+それを整理するために、`pivot_longer()`を使用します：
 
 ```{r}
 relig_income %>% 
@@ -79,26 +107,42 @@ relig_income %>%
 
 * The first argument is the dataset to reshape, `relig_income`.
 
+* 最初の引数は、整形するデータセット `relig_income` です。
+
 * `cols` describes which columns need to be reshaped. In this 
   case, it's every column apart from `religion`.
 
+* `cols` は、どのカラムの形を変える必要があるかを記述します。この場合 
+  この場合、`religion`を除いたすべてのカラムが対象となります。
+
 * `names_to` gives the name of the variable that will be created from
   the data stored in the column names, i.e. `income`.
-  
+
+* `names_to` は、カラム名に格納されたデータから作成される変数の名前です。 `income`のように、カラム名に格納されたデータから作成される変数の名前を指定します。
+
 * `values_to` gives the name of the variable that will be created from
   the data stored in the cell value, i.e. `count`.
-  
+
+* セルの値に格納されているデータから作成される変数の名前、つまり `values_to` を指定します。 セル値に格納されたデータから生成される変数の名前、すなわち `count` を指定します。
+
 Neither the `names_to` nor the `values_to` column exists in `relig_income`, so we provide them as strings surrounded by quotes.
+
+`relig_income`には `names_to` と `values_to` のどちらのカラムも存在しないので、引用符で囲まれた文字列として提供します。
 
 ### Numeric data in column names {#billboard}
 
 The `billboard` dataset records the billboard rank of songs in the year 2000. It has a form similar to the `relig_income` data, but the data encoded in the column names is really a number, not a string. 
+
+`billboard`データセットには、2000年における楽曲のビルボードランキングが記録されている。
+これは`relig_income`データと似た形式を持つが、カラム名にエンコードされているデータは文字列ではなく、実際には数値である。
 
 ```{r}
 billboard
 ```
 
 We can start with the same basic specification as for the `relig_income` dataset. Here we want the names to become a variable called `week`, and the values to become a variable called `rank`. I also use `values_drop_na` to drop rows that correspond to missing values. Not every song stays in the charts for all 76 weeks, so the structure of the input data force the creation of unnecessary explicit `NA`s.
+
+まず、`relig_income`データセットと同じ基本仕様で始めることができる。ここでは、名前を `week` という変数にし、値を `rank` という変数にしたい。また、`values_drop_na`を使用して、欠損値に対応する行を削除しています。すべての曲が76週すべてチャートにとどまるわけではないので、入力データの構造上、不必要な明示的な `NA` を作成せざるを得ない。
 
 ```{r}
 billboard %>% 
@@ -111,6 +155,8 @@ billboard %>%
 ```
 
 It would be nice to easily determine how long each song stayed in the charts, but to do that, we'll need to convert the `week` variable to an integer. We can do that by using two additional arguments: `names_prefix` strips off the `wk` prefix, and `names_transform` converts `week` into an integer:
+
+各曲がどれくらいの期間チャートに入っていたかを簡単に調べることができればいいのですが、そのためには `week` 変数を整数に変換することが必要でしょう。`names_prefix`は `wk` という接頭辞を取り除き、 `names_transform` は `week` を整数に変換します： 
 
 ```{r, eval = FALSE}
 billboard %>% 
@@ -125,6 +171,8 @@ billboard %>%
 ```
 
 Alternatively, you could do this with a single argument by using `readr::parse_number()` which automatically strips non-numeric components:
+
+また、数値以外の成分を自動的に除去する `readr::parse_number()` を使えば、1つの引数でこれを行うことができます：
 
 ```{r, eval = FALSE}
 billboard %>% 
@@ -141,23 +189,36 @@ billboard %>%
 
 A more challenging situation occurs when you have multiple variables crammed into the column names. For example, take the `who` dataset:
 
+より困難な状況は、カラム名に複数の変数が詰め込まれている場合に発生します。例えば、`who`データセットを見てみましょう：
+
 ```{r}
 who
 ```
 
 `country`, `iso2`, `iso3`, and `year` are already variables, so they can be left as is. But the columns from `new_sp_m014` to `newrel_f65` encode four variables in their names:
 
-* The `new_`/`new` prefix indicates these are counts of new cases. This
-  dataset only contains new cases, so we'll ignore it here because it's 
-  constant.
+`country`、`iso2`、`iso3`、`year`はすでに変数なので、そのままでよい。しかし、`new_sp_m014`から`newrel_f65`までのカラムは、その名前に4つの変数をエンコードしています：
+
+* The `new_`/`new` prefix indicates these are counts of new cases. This dataset only contains new cases, so we'll ignore it here because it's constant.
+
+* 接頭辞の `new_`/`new` は、これらが新規症例のカウントであることを示す。このデータセットには新規のケースしか含まれていないので、ここでは一定なので無視することにする。
   
 * `sp`/`rel`/`ep` describe how the case was diagnosed.
 
+* `sp`/`rel`/`ep`は、症例がどのように診断されたかを説明する。
+
 * `m`/`f` gives the gender.
+
+* `m`/`f` は性別を表します。
 
 * `014`/`1524`/`2535`/`3544`/`4554`/`65` supplies the age range.
 
+* `014`/`1524`/`2535`/`3544`/`4554`/`65` は、年齢層を表します。
+
 We can break these variables up by specifying multiple column names in `names_to`, and then either providing `names_sep` or `names_pattern`. Here `names_pattern` is the most natural fit. It has a similar interface to `extract`: you give it a regular expression containing groups (defined by `()`) and it puts each group in a column.
+
+`names_to`で複数のカラム名を指定し、`names_sep`または`names_pattern`を指定することで、これらの変数を分割することができます。ここでは `names_pattern` が最も自然にフィットします。
+これは `extract` と似たようなインターフェイスを持っています。グループを含む正規表現 (`()` で定義) を与えると、各グループをカラムに配置します。
 
 ```{r}
 who %>% 
@@ -170,6 +231,8 @@ who %>%
 ```
 
 We could go one step further use readr functions to convert the gender and age to factors. I think this is good practice when you have categorical variables with a known set of values.
+
+さらに一歩進んで、readr関数を使用して性別と年齢を因数に変換することができます。これは、既知の値のセットを持つカテゴリ変数がある場合、良い練習になると思います。
 
 ```{r, eval = FALSE}
 who %>% 
@@ -191,11 +254,17 @@ who %>%
 
 Doing it this way is a little more efficient than doing a mutate after the fact, `pivot_longer()` only has to transform one occurence of each name where a `mutate()` would need to transform many repetitions.
 
+この方法で実行すると、事後的に変更を行うよりも少し効率的です。 `mutate()` では多くの繰り返しを変換する必要があるのに対し、`pivot_longer()` は各名前の 1 つの出現を変換するだけで済みます。
+
 ### Multiple observations per row
 
 So far, we have been working with data frames that have one observation per row, but many important pivoting problems involve multiple observations per row. You can usually recognise this case because name of the column that you want to appear in the output is part of the column name in the input. In this section, you'll learn how to pivot this sort of data. 
 
+これまで、1行に1つの観測値を持つデータフレームを扱ってきましたが、重要なピボット問題の多くは、1行に複数の観測値を持ちます。この場合、出力に表示したい列の名前が、入力の列名の一部であることから、通常はこのケースを認識できます。このセクションでは、このようなデータをピボットする方法について学びます。
+
 The following example is adapted from the [data.table vignette](https://CRAN.R-project.org/package=data.table/vignettes/datatable-reshape.html), as inspiration for tidyr's solution to this problem.
+
+以下の例は、この問題に対するtidyrの解決策のインスピレーションとして、[data.table vignette](https://CRAN.R-project.org/package=data.table/vignettes/datatable-reshape.html)から引用しています。
 
 ```{r}
 household
@@ -203,25 +272,33 @@ household
 
 Note that we have two pieces of information (or values) for each child: their `name` and their `dob` (date of birth). These need to go into separate columns in the result. Again we supply multiple variables to `names_to`, using `names_sep` to split up each variable name. Note the special name `.value`: this tells `pivot_longer()` that that part of the column name specifies the "value" being measured (which will become a variable in the output).
 
+各子供について `name` と `dob` (date of birth) という2つの情報 (または値) を持っていることに注意してください。これらは最終的に別のカラムに格納する必要があります。ここでも `names_to` に複数の変数を指定し、`names_sep` を使って各変数名を分割しています。これは `pivot_longer()` に、列名の一部が測定される「値」（出力では変数となる）を指定するものであることを伝えるものです。
+
 ```{r}
 household %>% 
   pivot_longer(
     cols = !family, 
     names_to = c(".value", "child"), 
-    names_sep = "_", 
+    names_sep = "_",
     values_drop_na = TRUE
   )
 ```
 
 Note the use of `values_drop_na = TRUE`: the input shape forces the creation of explicit missing variables for observations that don't exist.
 
+values_drop_na = TRUE` の使用に注意してください：入力形状は、存在しないオブザベーションのための明示的な欠損変数を作成することを強制します。
+
 A similar problem problem also exists in the `anscombe` dataset built in to base R:
+
+同様の問題は、ベースRに組み込まれている`anscombe`データセットにも存在します：
 
 ```{r}
 anscombe
 ```
 
 This dataset contains four pairs of variables (`x1` and `y1`, `x2` and `y2`, etc) that underlie Anscombe's quartet, a collection of four datasets that have the same summary statistics (mean, sd, correlation etc), but have quite different data. We want to produce a dataset with columns `set`, `x` and `y`.
+
+このデータセットには4組の変数（`x1`と`y1`，`x2`と`y2`など）が含まれており，Anscombeのカルテット（平均、標準偏差など、要約統計量は同じだが，データが全く異なる4つのデータセットを集めたもの）の根底にある．私たちは、列 `set`、`x`、`y` を持つデータセットを作りたいと考えています。
 
 ```{r}
 anscombe %>% 
@@ -235,7 +312,11 @@ anscombe %>%
 
 Setting `cols_vary` to `"slowest"` groups the values from columns `x1` and `y1` together in the rows of the output before moving on to `x2` and `y2`. This argument often produces more intuitively ordered output when you are pivoting every column in your dataset.
 
+`cols_vary` を `"slowest"` に設定すると、 `x1` と `y1` の列の値をまとめて出力し、その後 `x2` と `y2` に移行します。この引数は、データセットのすべての列をピボット処理する場合に、より直感的に順序付けられた出力を生成することがよくあります。
+
 A similar situation can arise with panel data. For example, take this example dataset provided by [Thomas Leeper](https://github.com/leeper/rio/issues/193). We can tidy it using the same approach as for `anscombe`:
+
+パネルデータでも同様の事態が起こりうる。例えば、[Thomas Leeper](https://github.com/leeper/rio/issues/193)が提供したこのデータセットの例を見てみましょう。`anscombe`と同じ手法で整頓することができます：
 
 ```{r}
 pnl <- tibble(
@@ -260,15 +341,21 @@ pnl %>%
 
 `pivot_wider()` is the opposite of `pivot_longer()`: it makes a dataset __wider__ by increasing the number of columns and decreasing the number of rows. It's relatively rare to need `pivot_wider()` to make tidy data, but it's often useful for creating summary tables for presentation, or data in a format needed by other tools.
 
+`pivot_wider()`は、`pivot_longer()`の逆で、列数を増やし、行数を減らすことでデータセットを__広く__するものです。整頓されたデータを作るために `pivot_wider()` が必要になることは比較的少ないですが、プレゼンテーション用の要約表や、他のツールで用いられる形式のデータを作成する際にはよく役に立ちます。
+
 ### Capture-recapture data
 
 The `fish_encounters` dataset, contributed by [Myfanwy Johnston](https://fishsciences.github.io/post/visualizing-fish-encounter-histories/), describes when fish swimming down a river are detected by automatic monitoring stations:
+
+[Myfanwy Johnston](https://fishsciences.github.io/post/visualizing-fish-encounter-histories/) が提供した `fish_encounters` データセットは、川を泳ぐ魚が自動監視局によって検出されたときの様子を記述しています：
 
 ```{r}
 fish_encounters
 ```
 
 Many tools used to analyse this data need it in a form where each station is a column:
+
+このデータを分析するために用いられる多くのツールは、各ステーションが列となる形でデータを必要とします：
 
 ```{r}
 fish_encounters %>% 
@@ -279,6 +366,8 @@ fish_encounters %>%
 ```
 
 This dataset only records when a fish was detected by the station - it doesn't record when it wasn't detected (this is common with this type of data). That means the output data is filled with `NA`s. However, in this case we know that the absence of a record means that the fish was not `seen`, so we can ask `pivot_wider()` to fill these missing values in with zeros:
+
+このデータセットでは、魚がステーションで検出された場合のみ記録され、検出されなかった場合は記録されません（これはこの種のデータではよくあることです）。つまり、出力データは`NA`で埋め尽くされます。しかし、この場合、記録がないということは魚が「目撃（`seen`）されなかった」ということなので、 `pivot_wider()` に欠損値をゼロで埋めてもらうことができます：
 
 ```{r}
 fish_encounters %>% 
@@ -293,6 +382,8 @@ fish_encounters %>%
 
 You can also use `pivot_wider()` to perform simple aggregation. For example, take the `warpbreaks` dataset built in to base R (converted to a tibble for the better print method):
 
+また、`pivot_wider()` を使って単純な集計を行うこともできます。例えば、ベースRに組み込まれている `warpbreaks` データセットを見てみましょう（より良いプリント手法のためにtibbleに変換されています）：
+
 ```{r}
 warpbreaks <- warpbreaks %>% 
   as_tibble() %>% 
@@ -302,12 +393,16 @@ warpbreaks
 
 This is a designed experiment with nine replicates for every combination of `wool` (`A` and `B`) and `tension` (`L`, `M`, `H`):
 
+これは、`wool`（`A`、`B`）と`tension`（`L`、`M`、`H`）の組み合わせごとに9つの複製を持つ設計実験である：
+
 ```{r}
 warpbreaks %>% 
   count(wool, tension)
 ```
 
 What happens if we attempt to pivot the levels of `wool` into the columns?
+
+`wool`の水準を列にピボットさせようとするとどうなるでしょうか？
 
 ```{r}
 warpbreaks %>% 
@@ -318,6 +413,8 @@ warpbreaks %>%
 ```
 
 We get a warning that each cell in the output corresponds to multiple cells in the input. The default behaviour produces list-columns, which contain all the individual values. A more useful output would be summary statistics, e.g. `mean` breaks for each combination of wool and tension:
+
+出力の各セルが、入力の複数のセルに対応しているという警告が表示されます。デフォルトの動作では、個々の値をすべて含むリストカラムが生成されます。より有用な出力は、例えば、ウールとテンションの組み合わせごとの平均値などの要約統計です：
 
 ```{r}
 warpbreaks %>% 
@@ -330,9 +427,13 @@ warpbreaks %>%
 
 For more complex summary operations, I recommend summarising before reshaping, but for simple cases it's often convenient to summarise within `pivot_wider()`.
 
+より複雑な要約操作の場合は、再形成の前に要約することをお勧めしますが、単純なケースでは、`pivot_wider()`内で要約するのが便利なことが多いです。
+
 ### Generate column name from multiple variables
 
 Imagine, as in <https://stackoverflow.com/questions/24929954>, that we have information containing the combination of product, country, and year. In tidy form it might look like this:
+
+<https://stackoverflow.com/questions/24929954>のように、製品、国、年の組み合わせを含む情報があると想像してください。整頓された形では、次のようになります：
 
 ```{r}
 production <- 
@@ -348,6 +449,8 @@ production
 
 We want to widen the data so we have one column for each combination of `product` and `country`. The key is to specify multiple variables for `names_from`:
 
+データを広げて、`product`と`country`の組み合わせごとに1つのカラムを持つようにしたいです。このとき、`names_from`に複数の変数を指定することがポイントです：
+
 ```{r}
 production %>% 
   pivot_wider(
@@ -357,6 +460,8 @@ production %>%
 ```
 
 When either `names_from` or `values_from` select multiple variables, you can control how the column names in the output constructed with `names_sep` and `names_prefix`, or the workhorse `names_glue`:
+
+`names_from` または `values_from` が複数の変数を選択する場合、`names_sep` や `names_prefix` 、または `names_glue` を使って、出力する列名の構成方法を制御することができます：
 
 ```{r}
 production %>% 
@@ -379,11 +484,15 @@ production %>%
 
 The `us_rent_income` dataset contains information about median income and rent for each state in the US for 2017 (from the American Community Survey, retrieved with the [tidycensus][tidycensus] package).
 
+`us_rent_income`データセットには、2017年のアメリカの各州の所得と家賃の中央値に関する情報が含まれています（American Community Surveyより、[tidycensus][tidycensus] パッケージで取得）。
+
 ```{r}
 us_rent_income
 ```
 
 Here both `estimate` and `moe` are values columns, so we can supply them to `values_from`:
+
+ここで `estimate` と `moe` はどちらも値のカラムなので、`values_from` に渡すことができます：
 
 ```{r}
 us_rent_income %>% 
